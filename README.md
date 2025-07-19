@@ -25,6 +25,7 @@ python3 pomodoro.py
 Available commands inside the app:
 
 - `list` – show active projects with total and weekly time.
+- `add <project>` – create a new project entry.
 - `start <project>` – start a 25 minute Pomodoro for the specified project.
 - `pause` – pause the running timer.
 - `resume` – resume a paused timer.

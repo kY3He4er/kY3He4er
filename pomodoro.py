@@ -1,4 +1,3 @@
-import argparse
 import cmd
 import datetime
 import sqlite3
@@ -40,6 +39,17 @@ class DBManager:
             )"""
             )
             conn.commit()
+
+    def add_project(self, name: str) -> bool:
+        """Add a new project. Returns True if added, False if already exists."""
+        with sqlite3.connect(self.path) as conn:
+            c = conn.cursor()
+            try:
+                c.execute("INSERT INTO projects(name) VALUES(?)", (name,))
+                conn.commit()
+                return True
+            except sqlite3.IntegrityError:
+                return False
 
     def create_or_get_project(self, name: str) -> int:
         with sqlite3.connect(self.path) as conn:
@@ -160,6 +170,20 @@ class PomodoroApp(cmd.Cmd):
     def do_list(self, arg):
         """Show active projects and their times."""
         self._list_projects()
+
+    def do_add(self, arg):
+        """add <project> - add a new project"""
+        project = arg.strip()
+        if not project:
+            project = input("Project name: ").strip()
+        if not project:
+            print("Project name required.")
+            return
+        added = self.db.add_project(project)
+        if added:
+            print(f"Project '{project}' added.")
+        else:
+            print(f"Project '{project}' already exists.")
 
     def do_start(self, arg):
         """start <project> - start pomodoro for project"""
