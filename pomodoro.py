@@ -99,31 +99,46 @@ class DBManager:
         return data
 
 
+POMODORO_DURATION = 25 * 60
+BREAK_DURATION = 5 * 60
+
+
 class Timer(threading.Thread):
-    def __init__(self, duration: int, on_finish=None):
+    def __init__(self, duration: int, on_finish=None, on_duration=None, allow_overrun=False):
         super().__init__(daemon=True)
         self.duration = duration
         self.on_finish = on_finish
+        self.on_duration = on_duration
+        self.allow_overrun = allow_overrun
         self.elapsed = 0
         self.paused = False
         self.running = False
         self._lock = threading.Lock()
+        self._duration_called = False
 
     def run(self):
         self.running = True
-        while self.running and self.elapsed < self.duration:
+        while self.running and (self.allow_overrun or self.elapsed < self.duration):
             time.sleep(1)
             with self._lock:
                 if not self.paused:
                     self.elapsed += 1
                     remaining = self.duration - self.elapsed
-                    print(
-                        f"\rTime left: {remaining//60:02d}:{remaining%60:02d}",
-                        end="",
-                        flush=True,
-                    )
+                    if remaining >= 0:
+                        msg = f"\rTime left: {remaining//60:02d}:{remaining%60:02d}"
+                    else:
+                        msg = f"\rOvertime: {(-remaining)//60:02d}:{(-remaining)%60:02d}"
+                    print(msg, end="", flush=True)
+                    if (
+                        self.on_duration
+                        and not self._duration_called
+                        and self.elapsed >= self.duration
+                    ):
+                        self._duration_called = True
+                        print()
+                        self.on_duration()
         print()
-        if self.running and self.on_finish:
+        if self.elapsed >= self.duration and self.on_finish and not self.allow_overrun:
             self.on_finish()
 
     def pause(self):
@@ -150,6 +165,8 @@ class PomodoroApp(cmd.Cmd):
         self.current_project_id = None
         self.current_project_name = None
         self.session_start = None
+        self.awaiting_break = False
+        self.break_timer = None
 
     # utility
     def _list_projects(self):
@@ -185,6 +202,24 @@ class PomodoroApp(cmd.Cmd):
         else:
             print(f"Project '{project}' already exists.")
 
+    def _on_duration(self):
+        print("Pomodoro finished. Press Enter to start break.")
+        self.awaiting_break = True
+
+    def _start_pomodoro(self, project: str) -> None:
+        self.current_project_name = project
+        self.current_project_id = self.db.create_or_get_project(project)
+        self.session_start = int(time.time())
+        self.timer = Timer(
+            POMODORO_DURATION,
+            on_duration=self._on_duration,
+            allow_overrun=True,
+        )
+        self.timer.start()
+        print(
+            f"Started pomodoro for '{project}'. Type 'pause', 'resume', or 'stop' to control."
+        )
+
     def do_start(self, arg):
         """start <project> - start pomodoro for project"""
         if self.timer and self.timer.running:
@@ -197,17 +232,10 @@ class PomodoroApp(cmd.Cmd):
             print("Project name required.")
             return
         self._list_projects()
-        self.current_project_name = project
-        self.current_project_id = self.db.create_or_get_project(project)
-        self.session_start = int(time.time())
-        self.timer = Timer(25 * 60, self._auto_finish)
-        self.timer.start()
-        print(
-            f"Started pomodoro for '{project}'. Type 'pause', 'resume', or 'stop' to control."
-        )
+        self._start_pomodoro(project)
 
-    def _auto_finish(self):
-        duration = self.timer.elapsed
+    def _finish_session(self, reason: str = "finished") -> None:
+        duration = self.timer.elapsed if self.timer else 0
         self.db.add_session(
             self.current_project_id,
             self.session_start,
@@ -215,9 +243,26 @@ class PomodoroApp(cmd.Cmd):
             duration,
         )
         print(
-            f"Session for '{self.current_project_name}' finished. Duration {format_seconds(duration)}."
+            f"Session for '{self.current_project_name}' {reason}. Duration {format_seconds(duration)}."
         )
         self.timer = None
+
+    def _start_break(self) -> None:
+        if not self.timer:
+            return
+        self.timer.stop()
+        self.timer.join()
+        self._finish_session()
+        self.awaiting_break = False
+        print(f"Starting break for {BREAK_DURATION // 60} minutes.")
+        self.break_timer = Timer(BREAK_DURATION, on_finish=self._break_finished)
+        self.break_timer.start()
+
+    def _break_finished(self) -> None:
+        self.break_timer = None
+        print("Break finished. Starting next pomodoro.")
+        if self.current_project_name:
+            self._start_pomodoro(self.current_project_name)
 
     def do_pause(self, arg):
         """Pause running pomodoro."""
@@ -242,17 +287,13 @@ class PomodoroApp(cmd.Cmd):
             return
         self.timer.stop()
         self.timer.join()
-        duration = self.timer.elapsed
-        self.db.add_session(
-            self.current_project_id,
-            self.session_start,
-            int(time.time()),
-            duration,
-        )
-        print(
-            f"Session for '{self.current_project_name}' stopped. Duration {format_seconds(duration)}."
-        )
-        self.timer = None
+        self._finish_session("stopped")
+
+    def emptyline(self):
+        if self.awaiting_break:
+            self._start_break()
+        else:
+            pass
 
     def do_exit(self, arg):
         """Exit application."""
