@@ -166,6 +166,8 @@ class PomodoroApp(cmd.Cmd):
         self.current_project_name = None
         self.session_start = None
         self.awaiting_break = False
+        self.awaiting_next = False
+        self.blocks_completed = 0
         self.break_timer = None
 
     # utility
@@ -203,6 +205,7 @@ class PomodoroApp(cmd.Cmd):
             print(f"Project '{project}' already exists.")
 
     def _on_duration(self):
+        print("\a", end="", flush=True)
         print("Pomodoro finished. Press Enter to start break.")
         self.awaiting_break = True
 
@@ -253,6 +256,7 @@ class PomodoroApp(cmd.Cmd):
         self.timer.stop()
         self.timer.join()
         self._finish_session()
+        self.blocks_completed += 1
         self.awaiting_break = False
         print(f"Starting break for {BREAK_DURATION // 60} minutes.")
         self.break_timer = Timer(BREAK_DURATION, on_finish=self._break_finished)
@@ -260,9 +264,26 @@ class PomodoroApp(cmd.Cmd):
 
     def _break_finished(self) -> None:
         self.break_timer = None
-        print("Break finished. Starting next pomodoro.")
-        if self.current_project_name:
-            self._start_pomodoro(self.current_project_name)
+        if self.blocks_completed % 4 == 0:
+            print("\a\a\a", end="", flush=True)
+            print(
+                "Completed 4 pomodoros. Take a coffee break and walk around."
+            )
+            choice = ""
+            while choice not in ("y", "n"):
+                choice = input(
+                    "Continue working or pause? [Y/N]: "
+                ).strip().lower()
+            if choice == "y" and self.current_project_name:
+                self._start_pomodoro(self.current_project_name)
+            else:
+                print("Pausing. Use the 'start' command to resume later.")
+                self.current_project_name = None
+                self.current_project_id = None
+        else:
+            print("\a\a", end="", flush=True)
+            print("Break finished. Press Enter to start next pomodoro.")
+            self.awaiting_next = True
 
     def do_pause(self, arg):
         """Pause running pomodoro."""
@@ -292,6 +313,10 @@ class PomodoroApp(cmd.Cmd):
     def emptyline(self):
         if self.awaiting_break:
             self._start_break()
+        elif self.awaiting_next:
+            if self.current_project_name:
+                self._start_pomodoro(self.current_project_name)
+            self.awaiting_next = False
         else:
             pass
 
