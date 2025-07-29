@@ -182,6 +182,27 @@ class PomodoroApp(cmd.Cmd):
                 f"- {pid}. {name}: total {format_seconds(total)}, this week {format_seconds(week)}"
             )
 
+    def _choose_project(self) -> str:
+        """Display a menu of projects and return the chosen project name."""
+        projects = self.db.get_active_projects()
+        if not projects:
+            return input("New project name: ").strip()
+
+        print("Choose a project:")
+        for idx, (_, name, _, _) in enumerate(projects, start=1):
+            print(f"{idx}. {name}")
+        print("0. New project")
+
+        while True:
+            choice = input("Select project: ").strip()
+            if choice.isdigit():
+                num = int(choice)
+                if num == 0:
+                    return input("New project name: ").strip()
+                if 1 <= num <= len(projects):
+                    return projects[num - 1][1]
+            print("Invalid selection. Try again.")
+
     def preloop(self):
         self._list_projects()
 
@@ -230,11 +251,10 @@ class PomodoroApp(cmd.Cmd):
             return
         project = arg.strip()
         if not project:
-            project = input("Project name: ").strip()
+            project = self._choose_project()
         if not project:
             print("Project name required.")
             return
-        self._list_projects()
         self._start_pomodoro(project)
 
     def _finish_session(self, reason: str = "finished") -> None:
