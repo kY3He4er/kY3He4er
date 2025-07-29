@@ -26,7 +26,7 @@ Available commands inside the app:
 
 - `list` – show active projects with total and weekly time.
 - `add <project>` – create a new project entry.
-- `start <project>` – start a 25 minute Pomodoro for the specified project.
+- `start` – select an existing project from a menu and start a 25 minute Pomodoro. You can also specify a project name directly with `start <project>`.
 - `pause` – pause the running timer.
 - `resume` – resume a paused timer.
 - `stop` – stop the timer and record the session.
