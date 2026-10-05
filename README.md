@@ -1,36 +1,21 @@
-- 👋 Hi, I’m @kY3He4er
-- 👀 I’m interested in collaborations, machine learning, big data
-- 🌱 I’m currently learning python, SQL
-- 💞️ I’m looking to collaborate on anything that could help me to improve
-- 📫 How to reach me: DM, i'm online
-- ⚡ Fun fact: ...
+# Hi, I'm kY3He4er 👋
 
-<!---
-kY3He4er/kY3He4er is a ✨ special ✨ repository because its `README.md` (this file) appears on your GitHub profile.
-You can click the Preview link to take a look at your changes.
---->
+I'm building practical data analytics skills around **SQL, Python, pandas and data visualization**, with a professional background in logistics and operations.
 
-## Pomodoro Time Tracker
+## Current focus
 
-This repository includes a simple command line application for tracking time spent on projects using the Pomodoro technique. The script stores sessions in an SQLite database and allows you to pause or stop the timer.
+- **SQL / PostgreSQL** — querying, joins, aggregations, CTEs and window functions
+- **Python / pandas** — data cleaning, transformation and exploratory analysis
+- **Data visualization** — matplotlib and Plotly
+- **Git / GitHub** — reproducible project structure and documentation
+- **Analytics projects** — especially logistics, transport and operational data
 
-### Usage
+## Credential
 
-Run the application with Python:
+- Google Data Analytics Professional Certificate
 
-```bash
-python3 pomodoro.py
-```
+## What I'm working toward
 
-Available commands inside the app:
+A concise portfolio of end-to-end analytics projects: raw data → SQL transformation → Python analysis → visualization → documented findings.
 
-- `list` – show active projects with total and weekly time.
-- `add <project>` – create a new project entry.
-- `start` – select an existing project from a menu and start a 25 minute Pomodoro. You can also specify a project name directly with `start <project>`.
-- `pause` – pause the running timer.
-- `resume` – resume a paused timer.
-- `stop` – stop the timer and record the session.
-- `exit` – quit the application.
-
-The data is stored in `pomodoro.db` in the repository directory.
-
+Currently open to **remote junior data / BI / operations analytics opportunities** where I can keep building on this stack.
